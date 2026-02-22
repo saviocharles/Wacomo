@@ -1,0 +1,100 @@
+// Prisma Schema - WhatsApp Commodity Sourcing System
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        String   @default("USER") // ADMIN, USER, VIEWER
+  phone       String?
+  managerId   String?  // for hierarchy
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments Assignment[]
+  auditLogs   AuditLog[]
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  state     String?
+  createdAt DateTime @default(now())
+}
+
+model CommodityMaster {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  unit      String?  // kg, tons, quintal, MT
+  createdAt DateTime @default(now())
+}
+
+model WhatsAppGroup {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  groupId   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Commodity {
+  id          String    @id @default(uuid())
+  rawMessage  String
+  messageId   String?
+  sender      String?
+  groupName   String?
+  parsedName  String?
+  location    String?
+  rate        Float?
+  quantity    Float?
+  unit        String?
+  status      String    @default("PENDING") // PENDING, ASSIGNED, COMPLETED, UNIDENTIFIED
+  priority    String    @default("MEDIUM")  // HIGH, MEDIUM, LOW
+  deadline    DateTime?
+  remarks     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assignments Assignment[]
+  auditLogs   AuditLog[]
+}
+
+model Assignment {
+  id              String    @id @default(uuid())
+  commodityId     String
+  userId          String
+  status          String    @default("ASSIGNED") // ASSIGNED, WORK_IN_PROGRESS, COMPLETED
+  userRemarks     String?
+  updatedRate     Float?
+  updatedQuantity Float?
+  sourceLocation  String?
+  deadline        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  commodity       Commodity @relation(fields: [commodityId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+  auditLogs       AuditLog[]
+}
+
+model AuditLog {
+  id           String    @id @default(uuid())
+  userId       String?
+  commodityId  String?
+  assignmentId String?
+  action       String    // CREATED, ASSIGNED, STATUS_CHANGED, EDITED, etc.
+  details      String?
+  createdAt    DateTime  @default(now())
+
+  user        User?       @relation(fields: [userId], references: [id])
+  commodity   Commodity?  @relation(fields: [commodityId], references: [id])
+  assignment  Assignment? @relation(fields: [assignmentId], references: [id])
+}
